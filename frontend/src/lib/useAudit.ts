@@ -101,6 +101,7 @@ export function useAudit() {
       const es = new EventSource(`${API}/api/runs/${runId}/events`);
       esRef.current = es;
       setStatus("running");
+      pendoTrack("audit_started", { url, suggestedPrompt });
 
       const on = (name: string, fn: (data: any) => void) =>
         es.addEventListener(name, (ev) => {
@@ -129,6 +130,13 @@ export function useAudit() {
       on("done", (d: { result: AuditResult }) => {
         setResult(d.result);
         setThinking(null);
+        pendoTrack("audit_completed", {
+          url,
+          auditStatus: d.result.status,
+          steps: d.result.steps,
+          findingsCount: d.result.findings.length,
+          screenshotsCount: d.result.screenshots.length,
+        });
         try {
           if (typeof pendo !== "undefined") {
             pendo.trackAgent("agent_response", {
