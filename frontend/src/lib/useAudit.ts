@@ -34,6 +34,9 @@ export function useAudit() {
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
   const toolsRef = useRef<string[]>([]);
+  const auditUrlRef = useRef("");
+  const stepsCountRef = useRef(0);
+  const findingsCountRef = useRef(0);
 
   const reset = () => {
     setMeta(null);
@@ -45,6 +48,9 @@ export function useAudit() {
     setResult(null);
     setError(null);
     toolsRef.current = [];
+    auditUrlRef.current = "";
+    stepsCountRef.current = 0;
+    findingsCountRef.current = 0;
   };
 
   // Closing the EventSource drops the SSE connection, which the server detects
@@ -110,6 +116,7 @@ export function useAudit() {
       on("thinking", (d) => d.text && setThinking(d.text));
       on("step", (d: Step) => {
         setSteps((s) => [...s, d]);
+        stepsCountRef.current += 1;
         if (d.tool) toolsRef.current.push(d.tool);
       });
       on("screenshot", (d: Screenshot) =>
