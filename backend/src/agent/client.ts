@@ -4,7 +4,8 @@ if (!process.env.OPENROUTER_API_KEY) {
   throw new Error("Missing OPENROUTER_API_KEY — set it in backend/.env");
 }
 
-export const MODEL = process.env.OPENROUTER_MODEL!;
+export const MODEL =
+  process.env.OPENROUTER_MODEL ?? "google/gemini-2.0-flash-exp:free";
 
 export const llm = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
