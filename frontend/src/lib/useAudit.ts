@@ -32,6 +32,7 @@ export function useAudit() {
   const [result, setResult] = useState<AuditResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const toolsRef = useRef<string[]>([]);
 
   const reset = () => {
     setMeta(null);
@@ -42,6 +43,7 @@ export function useAudit() {
     setScreenshots([]);
     setResult(null);
     setError(null);
+    toolsRef.current = [];
   };
 
   // Closing the EventSource drops the SSE connection, which the server detects
@@ -53,7 +55,7 @@ export function useAudit() {
     setStatus("cancelled");
   }, []);
 
-  const start = useCallback(async (url: string, goal?: string) => {
+  const start = useCallback(async (url: string, goal?: string, suggestedPrompt = false) => {
     esRef.current?.close();
     reset();
     setStatus("starting");
@@ -69,6 +71,19 @@ export function useAudit() {
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const { runId } = await res.json();
+
+      try {
+        if (typeof pendo !== "undefined") {
+          pendo.trackAgent("prompt", {
+            agentId: "72mxajaMoLqJ4EHLihyd39v7Wdw",
+            conversationId: runId,
+            messageId: crypto.randomUUID(),
+            content: url,
+            suggestedPrompt,
+            fileUploaded: false,
+          });
+        }
+      } catch { /* analytics must never break the app */ }
 
       const es = new EventSource(`${API}/api/runs/${runId}/events`);
       esRef.current = es;
@@ -86,7 +101,10 @@ export function useAudit() {
       on("session", (d) => d.liveViewUrl && setLiveViewUrl(d.liveViewUrl));
       on("start", (d) => setMeta({ url: d.url, goal: d.goal, title: d.title }));
       on("thinking", (d) => d.text && setThinking(d.text));
-      on("step", (d: Step) => setSteps((s) => [...s, d]));
+      on("step", (d: Step) => {
+        setSteps((s) => [...s, d]);
+        if (d.tool) toolsRef.current.push(d.tool);
+      });
       on("screenshot", (d: Screenshot) =>
         setScreenshots((s) => [...s, { id: d.id, base64: d.base64 }]),
       );
@@ -96,6 +114,17 @@ export function useAudit() {
       on("done", (d: { result: AuditResult }) => {
         setResult(d.result);
         setThinking(null);
+        try {
+          if (typeof pendo !== "undefined") {
+            pendo.trackAgent("agent_response", {
+              agentId: "72mxajaMoLqJ4EHLihyd39v7Wdw",
+              conversationId: runId,
+              messageId: crypto.randomUUID(),
+              content: d.result.summary,
+              toolsUsed: [...new Set(toolsRef.current)],
+            });
+          }
+        } catch { /* analytics must never break the app */ }
       });
 
       es.addEventListener("error", (ev) => {
