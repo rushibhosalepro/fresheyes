@@ -32,18 +32,10 @@ export default function Home() {
   const showLeft = busy || screenshots.length > 0;
   const showStage = busy || steps.length > 0 || !!result;
 
-  const run = (raw: string) => {
+  const run = (raw: string, suggestedPrompt = false) => {
     const u = raw.trim();
     if (!u || busy) return;
-    const protocolAutoAdded = !/^https?:\/\//i.test(u);
-    const finalUrl = protocolAutoAdded ? `https://${u}` : u;
-    start(finalUrl);
-    pendoTrack("audit_started", {
-      url: finalUrl,
-      isExampleUrl: EXAMPLES.includes(finalUrl),
-      hasCustomGoal: false,
-      protocolAutoAdded,
-    });
+    start(/^https?:\/\//i.test(u) ? u : `https://${u}`, undefined, suggestedPrompt);
   };
 
   return (
@@ -100,7 +92,7 @@ export default function Home() {
               key={ex}
               onClick={() => {
                 setUrl(ex);
-                run(ex);
+                run(ex, true);
               }}
               disabled={busy}
               className="rounded-full border border-black/[.08] px-3 py-1 transition hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 dark:border-white/[.12]"

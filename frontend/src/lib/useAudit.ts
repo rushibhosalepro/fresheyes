@@ -33,9 +33,7 @@ export function useAudit() {
   const [result, setResult] = useState<AuditResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
-  const auditUrlRef = useRef("");
-  const stepsCountRef = useRef(0);
-  const findingsCountRef = useRef(0);
+  const toolsRef = useRef<string[]>([]);
 
   const reset = () => {
     setMeta(null);
@@ -46,9 +44,7 @@ export function useAudit() {
     setScreenshots([]);
     setResult(null);
     setError(null);
-    auditUrlRef.current = "";
-    stepsCountRef.current = 0;
-    findingsCountRef.current = 0;
+    toolsRef.current = [];
   };
 
   // Closing the EventSource drops the SSE connection, which the server detects
@@ -65,7 +61,7 @@ export function useAudit() {
     });
   }, []);
 
-  const start = useCallback(async (url: string, goal?: string) => {
+  const start = useCallback(async (url: string, goal?: string, suggestedPrompt = false) => {
     esRef.current?.close();
     reset();
     auditUrlRef.current = url;
@@ -82,6 +78,19 @@ export function useAudit() {
         throw new Error(body.error ?? `HTTP ${res.status}`);
       }
       const { runId } = await res.json();
+
+      try {
+        if (typeof pendo !== "undefined") {
+          pendo.trackAgent("prompt", {
+            agentId: "72mxajaMoLqJ4EHLihyd39v7Wdw",
+            conversationId: runId,
+            messageId: crypto.randomUUID(),
+            content: url,
+            suggestedPrompt,
+            fileUploaded: false,
+          });
+        }
+      } catch { /* analytics must never break the app */ }
 
       const es = new EventSource(`${API}/api/runs/${runId}/events`);
       esRef.current = es;
@@ -100,8 +109,8 @@ export function useAudit() {
       on("start", (d) => setMeta({ url: d.url, goal: d.goal, title: d.title }));
       on("thinking", (d) => d.text && setThinking(d.text));
       on("step", (d: Step) => {
-        stepsCountRef.current += 1;
         setSteps((s) => [...s, d]);
+        if (d.tool) toolsRef.current.push(d.tool);
       });
       on("screenshot", (d: Screenshot) =>
         setScreenshots((s) => [...s, { id: d.id, base64: d.base64 }]),
@@ -113,18 +122,17 @@ export function useAudit() {
       on("done", (d: { result: AuditResult }) => {
         setResult(d.result);
         setThinking(null);
-        const r = d.result;
-        pendoTrack("audit_completed", {
-          url: r.url,
-          auditStatus: r.status,
-          stepsCount: r.steps,
-          findingsCount: r.findings.length,
-          screenshotsCount: r.screenshots.length,
-          highSeverityCount: r.findings.filter((f) => f.severity === "high").length,
-          mediumSeverityCount: r.findings.filter((f) => f.severity === "medium").length,
-          lowSeverityCount: r.findings.filter((f) => f.severity === "low").length,
-          findingCategories: [...new Set(r.findings.map((f) => f.category).filter(Boolean))].join(", "),
-        });
+        try {
+          if (typeof pendo !== "undefined") {
+            pendo.trackAgent("agent_response", {
+              agentId: "72mxajaMoLqJ4EHLihyd39v7Wdw",
+              conversationId: runId,
+              messageId: crypto.randomUUID(),
+              content: d.result.summary,
+              toolsUsed: [...new Set(toolsRef.current)],
+            });
+          }
+        } catch { /* analytics must never break the app */ }
       });
 
       es.addEventListener("error", (ev) => {
