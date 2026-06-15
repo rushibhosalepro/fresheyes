@@ -1,0 +1,27 @@
+import { Stagehand, CustomOpenAIClient } from "@browserbasehq/stagehand";
+import { llm, MODEL } from "./client";
+
+/**
+ * Creates a Stagehand (v3) instance wired to Browserbase for the browser,
+ * and to OpenRouter for its act/observe/extract reasoning (same free model
+ * as the brain, via CustomOpenAIClient wrapping our OpenAI-compatible client).
+ *
+ * Call `await stagehand.init()` before use and `await stagehand.close()` after.
+ *   - navigation/screenshots:  stagehand.context.newPage() -> page.goto / page.screenshot
+ *   - high-level actions:      stagehand.act / .observe / .extract
+ */
+export function createStagehand() {
+  if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
+    throw new Error(
+      "Missing BROWSERBASE_API_KEY / BROWSERBASE_PROJECT_ID — set them in backend/.env",
+    );
+  }
+
+  return new Stagehand({
+    env: "BROWSERBASE",
+    apiKey: process.env.BROWSERBASE_API_KEY,
+    projectId: process.env.BROWSERBASE_PROJECT_ID,
+    llmClient: new CustomOpenAIClient({ modelName: MODEL, client: llm }),
+    verbose: 1,
+  });
+}
