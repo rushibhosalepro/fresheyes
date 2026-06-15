@@ -8,6 +8,7 @@ import type {
   Screenshot,
   Step,
 } from "./types";
+import { pendoTrack } from "./analytics";
 
 const API = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8787";
 
@@ -32,6 +33,9 @@ export function useAudit() {
   const [result, setResult] = useState<AuditResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
+  const auditUrlRef = useRef("");
+  const stepsCountRef = useRef(0);
+  const findingsCountRef = useRef(0);
 
   const reset = () => {
     setMeta(null);
@@ -42,6 +46,9 @@ export function useAudit() {
     setScreenshots([]);
     setResult(null);
     setError(null);
+    auditUrlRef.current = "";
+    stepsCountRef.current = 0;
+    findingsCountRef.current = 0;
   };
 
   // Closing the EventSource drops the SSE connection, which the server detects
@@ -51,11 +58,17 @@ export function useAudit() {
     esRef.current = null;
     setThinking(null);
     setStatus("cancelled");
+    pendoTrack("audit_cancelled", {
+      url: auditUrlRef.current,
+      stepsCompletedBeforeCancel: stepsCountRef.current,
+      findingsCountBeforeCancel: findingsCountRef.current,
+    });
   }, []);
 
   const start = useCallback(async (url: string, goal?: string) => {
     esRef.current?.close();
     reset();
+    auditUrlRef.current = url;
     setStatus("starting");
 
     try {
@@ -86,27 +99,51 @@ export function useAudit() {
       on("session", (d) => d.liveViewUrl && setLiveViewUrl(d.liveViewUrl));
       on("start", (d) => setMeta({ url: d.url, goal: d.goal, title: d.title }));
       on("thinking", (d) => d.text && setThinking(d.text));
-      on("step", (d: Step) => setSteps((s) => [...s, d]));
+      on("step", (d: Step) => {
+        stepsCountRef.current += 1;
+        setSteps((s) => [...s, d]);
+      });
       on("screenshot", (d: Screenshot) =>
         setScreenshots((s) => [...s, { id: d.id, base64: d.base64 }]),
       );
-      on("finding", (d: { finding: Finding }) =>
-        setFindings((f) => [...f, d.finding]),
-      );
+      on("finding", (d: { finding: Finding }) => {
+        findingsCountRef.current += 1;
+        setFindings((f) => [...f, d.finding]);
+      });
       on("done", (d: { result: AuditResult }) => {
         setResult(d.result);
         setThinking(null);
+        const r = d.result;
+        pendoTrack("audit_completed", {
+          url: r.url,
+          auditStatus: r.status,
+          stepsCount: r.steps,
+          findingsCount: r.findings.length,
+          screenshotsCount: r.screenshots.length,
+          highSeverityCount: r.findings.filter((f) => f.severity === "high").length,
+          mediumSeverityCount: r.findings.filter((f) => f.severity === "medium").length,
+          lowSeverityCount: r.findings.filter((f) => f.severity === "low").length,
+          findingCategories: [...new Set(r.findings.map((f) => f.category).filter(Boolean))].join(", "),
+        });
       });
 
       es.addEventListener("error", (ev) => {
         const data = (ev as MessageEvent).data;
         if (!data) return; // native EventSource error (e.g. stream closed) — ignore
+        let msg = "stream error";
         try {
-          setError(JSON.parse(data).message ?? "stream error");
+          msg = JSON.parse(data).message ?? "stream error";
         } catch {
-          setError("stream error");
+          /* keep default */
         }
+        setError(msg);
         setStatus("error");
+        pendoTrack("audit_error", {
+          url,
+          errorMessage: msg.substring(0, 200),
+          errorPhase: "stream",
+          stepsCompletedBeforeError: stepsCountRef.current,
+        });
         es.close();
       });
 
@@ -115,8 +152,15 @@ export function useAudit() {
         es.close();
       });
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      setError(msg);
       setStatus("error");
+      pendoTrack("audit_error", {
+        url,
+        errorMessage: (msg || "unknown").substring(0, 200),
+        errorPhase: "init",
+        stepsCompletedBeforeError: 0,
+      });
     }
   }, []);
 
