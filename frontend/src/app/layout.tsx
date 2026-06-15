@@ -29,8 +29,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
-      <Script id="pendo-install" strategy="afterInteractive">{`
+      <body className="min-h-full flex flex-col">
+        {children}
+        <Script id="pendo-install" strategy="afterInteractive">{`
 (function(apiKey){
     (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
     v=['initialize','identify','updateOptions','pageLoad','track','trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
@@ -40,6 +41,7 @@ export default function RootLayout({
 })('14da89e0-ac39-4fe8-8e5b-325617f110ee');
 pendo.initialize({ visitor: { id: '' } });
 `}</Script>
+      </body>
     </html>
   );
 }
