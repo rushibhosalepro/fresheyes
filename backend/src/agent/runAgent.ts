@@ -316,13 +316,19 @@ export async function runAgent(
     let step = 0;
     while (step < MAX_STEPS && !finished && !signal?.aborted) {
       step++;
-      const res = await llm.chat.completions.create({
-        model: MODEL,
-        messages,
-        tools: TOOL_SCHEMAS,
-        // tool_choice: "auto",
-      });
+      let res;
 
+      try {
+        res = await llm.chat.completions.create({
+          model: MODEL,
+          messages,
+          tools: TOOL_SCHEMAS,
+          // tool_choice: "auto",
+        });
+      } catch (error) {
+        console.log(error);
+        throw error;
+      }
       const msg = res.choices[0]?.message;
       if (!msg) break;
       messages.push(msg as ChatMessage);
