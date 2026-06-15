@@ -48,7 +48,7 @@ Crucially, it's **calibrated, not padded**: FreshEyes first figures out *what ki
 
 ## 🏗️ Architecture
 
-FreshEyes is a **brain + hands** agent: a free LLM does the reasoning, a real cloud browser does the doing, and everything streams to the UI live over SSE.
+FreshEyes is a **brain + hands** agent: an LLM does the reasoning, a real cloud browser does the doing, and everything streams to the UI live over SSE.
 
 ```
 User (paste URL)
@@ -60,7 +60,7 @@ User (paste URL)
         ▼
   Bun + Express backend
         ├─ Agent orchestrator (hand-rolled tool-calling loop)
-        │     ├─ brain → OpenAI SDK → OpenRouter (free model)   [decide next action, judge friction, write report]
+        │     ├─ brain → OpenAI SDK → OpenRouter (the LLM)      [decide next action, judge friction, write report]
         │     └─ hands → Stagehand → Browserbase (real browser) [observe / act / screenshot]
         └─ streams: session(liveView) · thinking · step · screenshot · finding · done
 ```
@@ -77,13 +77,13 @@ A **bounded** perceive → reason → act loop (hard cap of 14 turns). The model
 | `record_finding` | Log one issue — category, severity, description, concrete fix |
 | `finish` | End the run (done / blocked) |
 
-The loop is deliberately defensive — free models emit malformed tool calls, so every tool result (including parse errors) is fed back as a message the model can read and self-correct from, and a block (login wall, bot-check) becomes a *finding*, never a crash.
+The loop is deliberately defensive — models can emit malformed tool calls, so every tool result (including parse errors) is fed back as a message the model can read and self-correct from, and a block (login wall, bot-check) becomes a *finding*, never a crash.
 
 ### Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Brain (LLM) | OpenAI SDK → **OpenRouter** (free model, e.g. NVIDIA Nemotron) — provider-agnostic |
+| Brain (LLM) | OpenAI SDK → **OpenRouter** (e.g. Google Gemini 2.5 Pro) — provider-agnostic |
 | Hands (browser) | **Stagehand v3** on **Browserbase** (managed remote browser, live view) |
 | Backend | **Bun + Express**, Server-Sent Events (SSE) |
 | Frontend | **Next.js + React + Tailwind**, react-markdown, jsPDF |
@@ -128,8 +128,8 @@ FreshEyes uses **Novus** (Pendo's product agent) for analytics. Novus connected 
 ### Prerequisites
 
 - [Bun](https://bun.sh) 1.3+
-- A free [OpenRouter](https://openrouter.ai/keys) API key
-- A free [Browserbase](https://www.browserbase.com) account (API key + project ID)
+- An [OpenRouter](https://openrouter.ai/keys) API key
+- A [Browserbase](https://www.browserbase.com) account (API key + project ID)
 
 ### Environment variables
 
@@ -137,7 +137,7 @@ FreshEyes uses **Novus** (Pendo's product agent) for analytics. Novus connected 
 
 ```env
 OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=nvidia/nemotron-3-super-120b-a12b:free
+OPENROUTER_MODEL=google/gemini-2.5-pro
 OPENROUTER_VISION=false           # true + a vision model = the agent SEES screenshots
 BROWSERBASE_API_KEY=bb_live_...
 BROWSERBASE_PROJECT_ID=...
@@ -209,7 +209,7 @@ fresheyes/
 ## 🧠 What We Learned
 
 - **The rubric is the product.** A plain "review this site" prompt produces generic, padded feedback. Moving the judgment into a calibrated `skill.md` — *figure out the page type first, then audit proportionately* — was the single biggest jump in output quality.
-- **Free models can drive agents** — but only if you build for them. NVIDIA Nemotron via OpenRouter handles OpenAI-style tool calls well; the win was a defensive loop that feeds errors back so malformed calls self-correct instead of dead-ending.
+- **A defensive loop beats model choice.** Routing through OpenRouter (OpenAI-style tool calls) kept the agent provider-agnostic — swappable with a one-line change; the real win was a loop that feeds tool errors back so malformed calls self-correct instead of dead-ending.
 - **Reliability beats cleverness for a demo.** The features that mattered most weren't the flashiest — live view, block-as-finding, a real Stop, and a run-once guard are what keep a stranger's URL from ever producing a blank screen.
 - **Watching is the magic.** Streaming the agent's actions and reasoning live turned "an AI looked at your site" into "I watched an AI get confused by my site" — far more visceral and convincing.
 

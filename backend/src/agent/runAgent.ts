@@ -314,6 +314,7 @@ export async function runAgent(
     ];
 
     let step = 0;
+    let nudges = 0; // times we've nudged a narrating model to actually call a tool
     while (step < MAX_STEPS && !finished && !signal?.aborted) {
       step++;
       let res;
@@ -344,8 +345,24 @@ export async function runAgent(
       const thought = reasoning || content;
       if (thought) onEvent({ type: "thinking", text: thought });
 
-      // Model replied with text but no tool call → treat as end of its reasoning.
-      if (!msg.tool_calls?.length) break;
+      // No tool call this turn. Weaker models sometimes *describe* an action
+      // ("To resolve this, I'll record a finding.") instead of *calling* the tool.
+      // Don't end the run on that — nudge the model to actually act, a few times,
+      // before giving up. Ending here is what caused bogus "0 findings / max_steps".
+      if (!msg.tool_calls?.length) {
+        if (nudges < 3) {
+          nudges++;
+          messages.push({
+            role: "user",
+            content:
+              "Don't just describe what you'll do — actually call a tool now. " +
+              "Use observe / act / screenshot / record_finding to continue, or call finish when you are truly done. " +
+              "If you noticed an issue, call record_finding for it before finishing.",
+          });
+          continue;
+        }
+        break;
+      }
 
       for (const call of msg.tool_calls) {
         const fn = (call as any).function;

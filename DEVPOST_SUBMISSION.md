@@ -28,9 +28,9 @@ Crucially, it's **calibrated, not padded**: it first figures out *what kind of p
 
 ## How I built it
 
-FreshEyes is a **brain + hands** agent. A free LLM does the reasoning; a real cloud browser does the doing; everything streams to the UI live.
+FreshEyes is a **brain + hands** agent. An LLM does the reasoning; a real cloud browser does the doing; everything streams to the UI live.
 
-- **Brain:** the OpenAI SDK pointed at **OpenRouter** (a free model), running a hand-rolled, bounded tool-calling loop. The model decides the next browser action one step at a time.
+- **Brain:** the OpenAI SDK pointed at **OpenRouter**, running a hand-rolled, bounded tool-calling loop. The model decides the next browser action one step at a time.
 - **Hands:** **Stagehand** on **Browserbase** — a managed remote browser with a live view. The model's tools are `observe`, `act`, `screenshot`, `record_finding`, and `finish`.
 - **The rubric is a file:** the agent's judgment lives in `skill.md`, a first-time-visitor audit guide loaded into the system prompt — so the product's "taste" can be tuned without touching code.
 - **Backend:** Bun + Express, streaming the agent's steps, reasoning, screenshots, and findings to the browser over Server-Sent Events.
@@ -42,7 +42,7 @@ FreshEyes is a **brain + hands** agent. A free LLM does the reasoning; a real cl
 ## Challenges I ran into
 
 - **Driving a real browser reliably.** An agent clicking through arbitrary sites fails in a hundred ways — logins, bot-checks, timeouts. The fix was to treat a block as a *finding* (not a crash), cap the loop, capture the live view immediately so it never *looks* stuck, and guard the run so a dropped connection can never re-trigger a second audit.
-- **Making a free model behave like an agent.** Free models emit malformed tool calls. The loop had to feed every error back as a message the model could read and self-correct from, instead of dead-ending.
+- **Making the model behave reliably as an agent.** Models can emit malformed tool calls. The loop had to feed every error back as a message the model could read and self-correct from, instead of dead-ending.
 - **Proportionate judgment.** Early versions over-reported — four findings and a "HIGH" on a placeholder page. Moving the calibration logic into `skill.md` ("figure out the page type first, then audit to that") was the biggest jump in quality.
 - **Streaming an agentic loop to the UI.** Surfacing the agent's reasoning, actions, screenshots, and findings as distinct live events — and letting the user truly cancel mid-run — took real iteration.
 
@@ -51,7 +51,7 @@ FreshEyes is a **brain + hands** agent. A free LLM does the reasoning; a real cl
 ## What I learned
 
 - **The rubric is the product.** A plain "review this site" prompt produces generic, padded feedback. A calibrated `skill.md` is what turned it into something useful.
-- **Free models can drive agents** — but only if you build defensively around their flakiness.
+- **A defensive loop matters more than the model.** Feeding tool errors back so malformed calls self-correct is what made the agent reliable, and routing through OpenRouter let me swap models with a one-line change.
 - **Reliability beats cleverness for a demo.** Live view, block-as-finding, a real Stop, and a run-once guard are what keep a stranger's URL from ever hitting a blank screen.
 - **Watching is the magic.** Streaming the agent's actions live turned "an AI looked at your site" into "I watched an AI get confused by my site" — far more convincing.
 
@@ -69,4 +69,4 @@ FreshEyes is a **brain + hands** agent. A free LLM does the reasoning; a real cl
 
 ## Built with
 
-Next.js · React · Tailwind · Bun · Express · Server-Sent Events · OpenRouter (free model) · OpenAI SDK · Stagehand · Browserbase · Novus (Pendo) · react-markdown · jsPDF · Vercel · Railway
+Next.js · React · Tailwind · Bun · Express · Server-Sent Events · OpenRouter · OpenAI SDK · Stagehand · Browserbase · Novus (Pendo) · react-markdown · jsPDF · Vercel · Railway
