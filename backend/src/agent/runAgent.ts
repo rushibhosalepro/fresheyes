@@ -6,7 +6,10 @@ import { createStagehand } from "./browser";
 type ChatMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 type ToolSchema = OpenAI.Chat.Completions.ChatCompletionTool;
 
-const MAX_STEPS = 14; // hard cap on agent turns (each turn may also trigger Stagehand LLM calls)
+// Safety cap on agent turns. Raise it for thorough audits with strong models via
+// the MAX_STEPS env var. A hard bound stays on purpose: if a model never calls
+// finish (it happens), an unbounded loop would run forever and burn tokens/minutes.
+const MAX_STEPS = Number(process.env.MAX_STEPS) || 30;
 
 // When true, screenshots are fed to the model so it can actually SEE the page
 // (judge visual design, imagery, color, layout). Requires a vision-capable
@@ -258,11 +261,25 @@ export async function runAgent(
         };
       },
       act: async ({ instruction }) => {
+        const before = page.url();
         const res: any = await stagehand.act(instruction);
+        const after = page.url();
+
+        // Stay on the site that was pasted — don't follow links off-domain.
+        if (!sameSite(after, url)) {
+          await page.goto(before).catch(() => {});
+          return {
+            success: false,
+            message: `That action left the site (it went to ${hostOf(after)}). This audit stays on ${hostOf(url)} only — I returned to the page. Don't follow links to other domains; audit just this site.`,
+            url: page.url(),
+            title: await page.title(),
+          };
+        }
+
         return {
           success: res?.success ?? true,
           message: res?.message ?? res?.action ?? null,
-          url: page.url(),
+          url: after,
           title: await page.title(),
         };
       },
@@ -317,6 +334,17 @@ export async function runAgent(
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
     while (step < MAX_STEPS && !finished && !signal?.aborted) {
       step++;
+
+      // One step from the cap: tell the model to wrap up so it finishes cleanly
+      // (record remaining findings, then call finish) instead of dying empty.
+      if (step === MAX_STEPS - 1) {
+        messages.push({
+          role: "user",
+          content:
+            "You are almost out of steps. Record any remaining findings now, then call finish (done or blocked). Stop exploring.",
+        });
+      }
+
       let res;
 
       try {
@@ -522,6 +550,29 @@ async function getLiveViewUrl(sessionId: string): Promise<string | undefined> {
 }
 
 // Best-effort parse of tool args for event payloads (never throws).
+// Is `target` on the same site as `base`? True for the same host or the same
+// apex domain (so subdomains of the audited site count as inside, external
+// domains don't). Used to keep the agent on the pasted link only.
+function sameSite(target: string, base: string): boolean {
+  try {
+    const ht = new URL(target).hostname.replace(/^www\./, "");
+    const hb = new URL(base).hostname.replace(/^www\./, "");
+    if (ht === hb) return true;
+    const apex = (h: string) => h.split(".").slice(-2).join(".");
+    return apex(ht) === apex(hb);
+  } catch {
+    return false;
+  }
+}
+
+function hostOf(u: string): string {
+  try {
+    return new URL(u).hostname.replace(/^www\./, "");
+  } catch {
+    return u;
+  }
+}
+
 function safeForEvent(raw: unknown): any {
   if (typeof raw !== "string") return raw ?? {};
   try {
