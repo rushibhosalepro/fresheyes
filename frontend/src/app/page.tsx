@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { pendoTrack } from "../lib/analytics";
 import { downloadMarkdown, downloadPdf, toMarkdown } from "../lib/export";
 import { useAudit } from "../lib/useAudit";
 import type { AuditResult, Screenshot, Step } from "../lib/types";
@@ -128,13 +129,29 @@ export default function Home() {
           {result && (
             <div className="flex gap-2">
               <button
-                onClick={() => downloadMarkdown(result)}
+                onClick={() => {
+                  downloadMarkdown(result);
+                  pendoTrack("report_exported_markdown", {
+                    url: result.url,
+                    findingsCount: result.findings.length,
+                    auditStatus: result.status,
+                    exportFormat: "markdown",
+                  });
+                }}
                 className="rounded-lg border border-black/[.1] px-3 py-1.5 text-sm font-medium transition hover:bg-black/[.04] dark:border-white/[.15] dark:hover:bg-white/[.06]"
               >
                 ⬇ Markdown
               </button>
               <button
-                onClick={() => downloadPdf(result)}
+                onClick={() => {
+                  downloadPdf(result);
+                  pendoTrack("report_exported_pdf", {
+                    url: result.url,
+                    findingsCount: result.findings.length,
+                    auditStatus: result.status,
+                    exportFormat: "pdf",
+                  });
+                }}
                 className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-blue-500"
               >
                 ⬇ PDF
