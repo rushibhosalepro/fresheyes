@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { pendoTrack } from "../lib/analytics";
@@ -331,32 +331,45 @@ function ActivityPanel({
   thinking: string | null;
   busy: boolean;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Auto-scroll the activity list to the latest entry as steps stream in.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [steps.length, busy]);
+
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
         Agent activity
       </h2>
 
-      <ol className="flex flex-col gap-1.5">
-        {steps.map((s, i) => {
-          const { label, detail } = describe(s);
-          return (
-            <li key={i} className="animate-in-up flex items-start gap-2.5">
-              <span aria-hidden className="mt-0.5">{toolIcon(s.tool)}</span>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
-                {detail && <span className="text-xs text-zinc-500">{detail}</span>}
-              </div>
+      <div
+        ref={scrollRef}
+        className="h-[420px] overflow-y-auto rounded-xl border border-black/[.06] bg-zinc-50/60 p-3 dark:border-white/[.08] dark:bg-zinc-900/40"
+      >
+        <ol className="flex flex-col gap-1.5">
+          {steps.map((s, i) => {
+            const { label, detail } = describe(s);
+            return (
+              <li key={i} className="animate-in-up flex items-start gap-2.5">
+                <span aria-hidden className="mt-0.5">{toolIcon(s.tool)}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
+                  {detail && <span className="text-xs text-zinc-500">{detail}</span>}
+                </div>
+              </li>
+            );
+          })}
+          {busy && (
+            <li className="flex items-center gap-2 text-sm text-blue-600">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
+              working…
             </li>
-          );
-        })}
-        {busy && (
-          <li className="flex items-center gap-2 text-sm text-blue-600">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-600" />
-            working…
-          </li>
-        )}
-      </ol>
+          )}
+        </ol>
+      </div>
 
       {thinking && (
         <p className="animate-in-up text-sm italic leading-relaxed text-zinc-400 dark:text-zinc-500">
