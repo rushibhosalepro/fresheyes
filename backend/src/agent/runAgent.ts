@@ -82,6 +82,8 @@ const SYSTEM_PROMPT = `You are FreshEyes — an agent that experiences a website
 
 Work one tool call at a time: observe() to see the page, act("...") to click / scroll / type, screenshot() at meaningful moments, record_finding(...) for each REAL issue (with its category), and finish(...) when done or blocked.
 
+You can only audit THIS site. External / off-site links will not open — acting on one just returns you to the page. So don't try to follow links to other domains, and do NOT record a finding whose only issue is an external link (its destination, or the styling of a link that simply leaves the site). Judge the on-site first-time-visitor experience.
+
 Be proportionate. FIRST judge what kind of page this is and how finished it's meant to be, then match the depth of your audit to that. A deliberately minimal placeholder (like example.com) deserves only 1-2 low-severity notes plus a clear statement that it's a placeholder — never pad the report or invent problems to hit a number. Every fix must be concrete and specific: suggest actual colors / hex, button styles, type sizes, spacing, layout, or exact copy — never vague advice like "improve the design". Calibrate severity to real impact on this page's goal, and mention genuine strengths in your summary.
 
 Follow this audit guide:
@@ -332,19 +334,10 @@ export async function runAgent(
 
     let step = 0;
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
-    while (step < MAX_STEPS && !finished && !signal?.aborted) {
+    // No step/time cap for now (testing) — the loop ends only when the model
+    // calls finish() or the run is cancelled.
+    while (!finished && !signal?.aborted) {
       step++;
-
-      // One step from the cap: tell the model to wrap up so it finishes cleanly
-      // (record remaining findings, then call finish) instead of dying empty.
-      if (step === MAX_STEPS - 1) {
-        messages.push({
-          role: "user",
-          content:
-            "You are almost out of steps. Record any remaining findings now, then call finish (done or blocked). Stop exploring.",
-        });
-      }
-
       let res;
 
       try {
