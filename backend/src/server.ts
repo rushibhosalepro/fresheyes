@@ -75,10 +75,22 @@ app.get("/api/runs/:id/events", async (req, res) => {
   }
   run.status = "running";
 
+  // Heartbeat: keep the SSE connection alive through slow agent steps (an
+  // observe/act can take 20-40s with no events) so a proxy or the browser
+  // doesn't drop the idle stream and disconnect the run mid-audit.
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(": ping\n\n");
+    } catch {
+      /* connection already closed */
+    }
+  }, 15000);
+
   let aborted = false;
   const ac = new AbortController();
   req.on("close", () => {
     aborted = true;
+    clearInterval(heartbeat);
     ac.abort(); // stop the agent loop + close the browser, so we don't burn credits
   });
 
@@ -100,6 +112,7 @@ app.get("/api/runs/:id/events", async (req, res) => {
     run.error = (err as Error).message;
     if (!aborted) send("error", { message: run.error });
   } finally {
+    clearInterval(heartbeat);
     res.end();
   }
 });
