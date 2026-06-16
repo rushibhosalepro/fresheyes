@@ -1,5 +1,5 @@
 import { Stagehand, CustomOpenAIClient } from "@browserbasehq/stagehand";
-import { llm, MODEL } from "./client";
+import { llm, STAGEHAND_MODEL } from "./client";
 
 /**
  * Creates a Stagehand (v3) instance wired to Browserbase for the browser,
@@ -21,7 +21,7 @@ export function createStagehand() {
     env: "BROWSERBASE",
     apiKey: process.env.BROWSERBASE_API_KEY,
     projectId: process.env.BROWSERBASE_PROJECT_ID,
-    llmClient: new CustomOpenAIClient({ modelName: MODEL, client: llm }),
+    llmClient: new CustomOpenAIClient({ modelName: STAGEHAND_MODEL, client: llm }),
     verbose: 1,
   });
 }
