@@ -23,5 +23,11 @@ export function createStagehand() {
     projectId: process.env.BROWSERBASE_PROJECT_ID,
     llmClient: new CustomOpenAIClient({ modelName: STAGEHAND_MODEL, client: llm }),
     verbose: 1,
+    // Pages that constantly mutate the DOM (e.g. a streaming AI chat like
+    // Finbuddy) never "settle", so Stagehand waits the full default (~30s) on
+    // EVERY observe/act before proceeding — that's the hang/"stuck". Bound the
+    // settle wait and the per-action time so the agent keeps moving.
+    domSettleTimeout: 5000,
+    actTimeoutMs: 30000,
   });
 }
