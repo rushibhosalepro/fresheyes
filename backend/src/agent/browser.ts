@@ -29,5 +29,11 @@ export function createStagehand() {
     // settle wait and the per-action time so the agent keeps moving.
     domSettleTimeout: 5000,
     actTimeoutMs: 30000,
+    // Give the session the full free-tier window (15 min / 900s) instead of the
+    // lower project default — that default is what cut runs off ("session timed out").
+    browserbaseSessionCreateParams: {
+      projectId: process.env.BROWSERBASE_PROJECT_ID!,
+      timeout: 900,
+    },
   });
 }
