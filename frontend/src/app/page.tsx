@@ -357,21 +357,12 @@ function ActivityPanel({
         <ol className="flex flex-col gap-1.5">
           {steps.map((s, i) => {
             const { label, detail } = describe(s);
-            const thought =
-              typeof (s.args as Record<string, unknown>)?.thought === "string"
-                ? ((s.args as Record<string, string>).thought as string)
-                : "";
             return (
               <li key={i} className="animate-in-up flex items-start gap-2.5">
                 <span aria-hidden className="mt-0.5">{toolIcon(s.tool)}</span>
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
                   {detail && <span className="text-xs text-zinc-500">{detail}</span>}
-                  {thought && (
-                    <span className="mt-0.5 text-xs italic leading-relaxed text-zinc-400 dark:text-zinc-500">
-                      💭 {thought}
-                    </span>
-                  )}
                 </div>
               </li>
             );

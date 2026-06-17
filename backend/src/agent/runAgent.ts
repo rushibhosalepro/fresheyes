@@ -353,6 +353,7 @@ export async function runAgent(
     ];
 
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
+    let emptyResponses = 0; // provider returned no choices (rate limit / hiccup)
     let sessionClosed = false; // Browserbase session ended (e.g. 15-min cap)
     // Bounded by MAX_STEPS (plus the model calling finish, the run being
     // cancelled, or the Browserbase session closing). No wall-clock cap.
@@ -371,8 +372,20 @@ export async function runAgent(
         console.log(error);
         throw error;
       }
-      const msg = res.choices[0]?.message;
-      if (!msg) break;
+      // OpenRouter can return a 200 with NO choices — an error payload instead
+      // (rate-limited free model, provider hiccup). Reading res.choices[0]
+      // directly then crashes ("undefined is not an object"). Guard it: retry a
+      // few times for a transient blip, then stop gracefully with a report.
+      const msg = res?.choices?.[0]?.message;
+      if (!msg) {
+        emptyResponses++;
+        console.log(
+          `Model returned no choices (attempt ${emptyResponses}):`,
+          truncate(JSON.stringify(res)),
+        );
+        if (emptyResponses <= 3) continue; // transient — try again
+        break; // give up and synthesize from what we have so far
+      }
       messages.push(msg as ChatMessage);
 
       // Surface the model's reasoning so the UI can show what it's thinking.
