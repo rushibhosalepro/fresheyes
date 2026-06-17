@@ -125,8 +125,9 @@ export function useAudit() {
         setFindings((f) => [...f, d.finding]);
       });
       on("done", (d: { result: AuditResult }) => {
+        // The SSE `done` is sent without screenshots (too big for one frame);
+        // the `end` handler below pulls the full result with images.
         setResult(d.result);
-        setScreenshots(d.result.screenshots); // populate the recording from the final result
         setThinking(null);
         pendoTrack("audit_completed", {
           url,
@@ -168,9 +169,21 @@ export function useAudit() {
         es.close();
       });
 
-      es.addEventListener("end", () => {
+      es.addEventListener("end", async () => {
         setStatus("done");
         es.close();
+        // Pull the full stored result so the report + recording keep their
+        // images — the SSE `done` omits screenshots to stay under the HTTP/2
+        // frame size that was killing the stream.
+        try {
+          const full = await fetch(`${API}/api/runs/${runId}`).then((r) => r.json());
+          if (full?.result) {
+            setResult(full.result);
+            setScreenshots(full.result.screenshots ?? []);
+          }
+        } catch {
+          /* keep the image-less report already shown */
+        }
       });
     } catch (e) {
       const msg = (e as Error).message;

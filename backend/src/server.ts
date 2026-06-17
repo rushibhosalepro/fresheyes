@@ -105,7 +105,16 @@ app.get("/api/runs/:id/events", async (req, res) => {
       goal: run.goal,
       signal: ac.signal,
       onEvent: (e: AgentEvent) => {
-        if (!aborted) send(e.type, e);
+        if (aborted) return;
+        // The `done` result carries every screenshot's base64; sending them in
+        // one SSE frame trips ERR_HTTP2_PROTOCOL_ERROR at the edge, so the client
+        // never gets the report. Send a light `done` (no images) and let the
+        // client pull the full result — with images — via GET /api/runs/:id.
+        if (e.type === "done") {
+          send("done", { ...e, result: { ...e.result, screenshots: [] } });
+          return;
+        }
+        send(e.type, e);
       },
     });
     run.status = aborted ? "cancelled" : "done";
