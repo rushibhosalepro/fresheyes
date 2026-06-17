@@ -536,9 +536,16 @@ export async function runAgent(
     onEvent({ type: "done", result });
     return result;
   } catch (err) {
-    // If the failure is just the Browserbase session ending, don't error out —
-    // hand back a report built from whatever was found so far.
-    if (isSessionClosed(err)) {
+    // The browser/session died (15-min cap, socket close, CDP transport gone) —
+    // or anything else threw after the audit was under way. Don't lose the run:
+    // build the final report from whatever context we gathered instead of
+    // erroring out. We only surface a hard error when nothing was audited yet
+    // (e.g. the site never loaded), since there'd be nothing to report.
+    if (isSessionClosed(err) || step > 0) {
+      console.log(
+        "runAgent: building final report after error:",
+        (err as Error)?.message ?? err,
+      );
       const summary = await synthesize(messages, findings, true).catch(
         () => "The audit ended early when the browser session closed.",
       );
@@ -667,11 +674,16 @@ function isSessionClosed(err: unknown): boolean {
     "session timed out",
     "transport closed",
     "socket-close",
+    "code=1006",
     "target closed",
+    "has been closed", // Playwright: "Target page, context or browser has been closed"
     "connection ended",
+    "connection closed",
     "session not found",
+    "session with given id not found",
     "browser has disconnected",
     "cdp connection closed",
+    "websocket",
   ].some((s) => m.includes(s));
 }
 
