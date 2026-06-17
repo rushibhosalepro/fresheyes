@@ -4,7 +4,7 @@
 
 **🚀 [Try FreshEyes Live](#)** | **📹 [Watch the Demo](#)** | **📊 Measured with Novus**
 
-![FreshEyes](./screenshots/hero.png)
+![FreshEyes auditing a live site — live browser preview and streaming agent activity](./images/home-page.PNG)
 
 ---
 
@@ -33,9 +33,6 @@ Paste any URL. FreshEyes:
 5. **Returns a Markdown report** you can read inline, scrub through frame-by-frame, and export to **Markdown or PDF**.
 
 Crucially, it's **calibrated, not padded**: FreshEyes first figures out *what kind of page this is* — a throwaway placeholder vs. a real product landing page — and matches the depth and severity of its audit to reality. A placeholder gets 1–2 honest low-severity notes, not an inflated list.
-
-![Report](./screenshots/report.png)
-![Live view](./screenshots/live.png)
 
 ---
 
