@@ -275,48 +275,63 @@ export async function runAgent(
     // Tool implementations, closing over this run's browser + collectors.
     const impls: Record<string, (args: any) => Promise<unknown>> = {
       observe: async ({ instruction }) => {
-        const actions = await stagehand.observe(
-          instruction ??
-            "the main interactive elements a first-time visitor would use",
-        );
-        return {
-          url: page.url(),
-          elements: (actions as any[]).slice(0, 15).map((a) => ({
-            description: a.description ?? a.selector ?? "element",
-          })),
-        };
+        try {
+          const actions = await stagehand.observe(
+            instruction ??
+              "the main interactive elements a first-time visitor would use",
+          );
+          return {
+            url: page.url(),
+            elements: (actions as any[]).slice(0, 15).map((a) => ({
+              description: a.description ?? a.selector ?? "element",
+            })),
+          };
+        } catch (e) {
+          logToolError("observe", e);
+          throw e; // runTool turns this into a model-readable result + __sessionClosed
+        }
       },
       act: async ({ instruction }) => {
-        const before = page.url();
-        const res: any = await stagehand.act(instruction);
-        const after = page.url();
+        try {
+          const before = page.url();
+          const res: any = await stagehand.act(instruction);
+          const after = page.url();
 
-        // Stay on the site that was pasted — don't follow links off-domain.
-        if (!sameSite(after, url)) {
-          await page.goto(before).catch(() => {});
+          // Stay on the site that was pasted — don't follow links off-domain.
+          if (!sameSite(after, url)) {
+            await page.goto(before).catch(() => {});
+            return {
+              success: false,
+              message: `That action left the site (it went to ${hostOf(after)}). This audit stays on ${hostOf(url)} only — I returned to the page. Don't follow links to other domains; audit just this site.`,
+              url: page.url(),
+              title: await page.title(),
+            };
+          }
+
           return {
-            success: false,
-            message: `That action left the site (it went to ${hostOf(after)}). This audit stays on ${hostOf(url)} only — I returned to the page. Don't follow links to other domains; audit just this site.`,
-            url: page.url(),
+            success: res?.success ?? true,
+            message: res?.message ?? res?.action ?? null,
+            url: after,
             title: await page.title(),
           };
+        } catch (e) {
+          logToolError("act", e);
+          throw e;
         }
-
-        return {
-          success: res?.success ?? true,
-          message: res?.message ?? res?.action ?? null,
-          url: after,
-          title: await page.title(),
-        };
       },
       screenshot: async ({ note }) => {
-        const buffer = await page.screenshot({});
-        const id = `step-${screenshots.length + 1}`;
-        const base64 = buffer.toString("base64");
-        screenshots.push({ id, base64 });
-        if (VISION) pendingImages.push(base64); // hand it to the model after this turn
-        onEvent({ type: "screenshot", id, base64 });
-        return { ok: true, id, note: note ?? null };
+        try {
+          const buffer = await page.screenshot({});
+          const id = `step-${screenshots.length + 1}`;
+          const base64 = buffer.toString("base64");
+          screenshots.push({ id, base64 });
+          if (VISION) pendingImages.push(base64); // hand it to the model after this turn
+          onEvent({ type: "screenshot", id, base64 });
+          return { ok: true, id, note: note ?? null };
+        } catch (e) {
+          logToolError("screenshot", e);
+          throw e;
+        }
       },
       record_finding: async (args) => {
         const finding: Finding = {
@@ -626,6 +641,18 @@ async function runTool(
       error: `tool "${name}" threw: ${(e as Error).message}`,
       hint: "Try a different action, observe again, or finish as blocked if you cannot proceed.",
     };
+  }
+}
+
+// Log a browser tool failure with its source, and call out when it looks like
+// the Browserbase session ended (e.g. hit the 15-min cap) versus an ordinary
+// per-action error. For now this is just visibility in the server logs.
+function logToolError(tool: string, err: unknown): void {
+  const message = (err as Error)?.message ?? String(err);
+  if (isSessionClosed(err)) {
+    console.log(`[${tool}] browser session ended (likely timeout): ${message}`);
+  } else {
+    console.log(`[${tool}] tool error: ${message}`);
   }
 }
 
