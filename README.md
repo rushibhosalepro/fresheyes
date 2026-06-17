@@ -199,6 +199,7 @@ fresheyes/
 
 ## 🔮 What's Next
 
+- **Background jobs for long audits** — large sites can take anywhere from ~5 minutes to an hour to crawl fully. Move audits onto a durable background job queue with persistent run storage, so a scan keeps running independent of the browser connection and users can close the tab and come back to a finished report.
 - **Vision by default** — pair a vision-capable model with the existing `OPENROUTER_VISION` path so visual-design and imagery findings are judged from real pixels, not the DOM.
 - **Multi-page journeys** — follow a full funnel (landing → pricing → signup), not just the first screen.
 - **Before/after re-audits** — track a score over time as you ship fixes.
