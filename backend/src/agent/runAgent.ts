@@ -241,6 +241,10 @@ export async function runAgent(
   const pendingImages: string[] = []; // screenshots captured this turn, fed to a vision model
   let finished: { outcome: "done" | "blocked"; reason: string } | null = null;
   let step = 0; // declared before the try so the catch can still report progress
+  // Hoisted out of the try so an early exit (catch / session close / cancel) can
+  // still synthesize a summary from the full conversation gathered so far,
+  // instead of summarizing from an empty context.
+  const messages: ChatMessage[] = [];
 
   try {
     // Use the session's existing page (single target) so the live view shows
@@ -339,7 +343,7 @@ export async function runAgent(
       },
     };
 
-    const messages: ChatMessage[] = [
+    messages.push(
       { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
@@ -350,7 +354,7 @@ export async function runAgent(
           `Goal: judge the whole first impression and try the primary action (${goal ?? "sign up / get started / buy"}).\n\n` +
           `First judge what kind of page this is and how finished it's meant to be, then audit proportionately. Observe the page, scroll through the key sections, and try the primary action if there is one. Screenshot meaningful moments. Record only findings that genuinely matter for this page — across whichever categories apply — with specific, concrete fixes (actual colors, button styles, type, spacing, copy). Don't pad. Finish when done or blocked.`,
       },
-    ];
+    );
 
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
     let emptyResponses = 0; // provider returned no choices (rate limit / hiccup)
@@ -478,11 +482,24 @@ export async function runAgent(
     }
 
     const aborted = signal?.aborted ?? false;
-    const summary = aborted
-      ? "Audit cancelled."
-      : await synthesize(messages, findings, sessionClosed).catch(
-          () => "Could not generate a summary.",
-        );
+    // Whether the run was cut short rather than reaching a natural finish — used
+    // both to flag the summary and to decide the status below.
+    const endedEarly = aborted || sessionClosed;
+    // Don't throw away the work on an early exit. Even when the run is cancelled
+    // (dropped SSE connection) or the Browserbase session hits its 15-min cap,
+    // synthesize from the context (messages + findings) gathered so far so the
+    // report reflects the steps already taken instead of a blank "Audit
+    // cancelled." Only skip synthesis if literally nothing was observed.
+    const summary =
+      step === 0
+        ? aborted
+          ? "Audit cancelled before any steps ran."
+          : "No steps were taken."
+        : await synthesize(messages, findings, endedEarly).catch(() =>
+            findings.length
+              ? `Audit ended early after ${step} steps with ${findings.length} finding(s) recorded.`
+              : `Audit ended early after ${step} steps before any findings were recorded.`,
+          );
     const status: AuditResult["status"] = aborted
       ? "cancelled"
       : finished
@@ -505,7 +522,7 @@ export async function runAgent(
     // If the failure is just the Browserbase session ending, don't error out —
     // hand back a report built from whatever was found so far.
     if (isSessionClosed(err)) {
-      const summary = await synthesize([], findings, true).catch(
+      const summary = await synthesize(messages, findings, true).catch(
         () => "The audit ended early when the browser session closed.",
       );
       const result: AuditResult = {
@@ -530,7 +547,7 @@ export async function runAgent(
 async function synthesize(
   messages: ChatMessage[],
   findings: Finding[],
-  timeLimited = false,
+  endedEarly = false,
 ): Promise<string> {
   const res = await llm.chat.completions.create({
     model: MODEL,
@@ -543,8 +560,8 @@ async function synthesize(
           `Lead with the overall impression, then the most important things to fix, then name 2-3 concrete strengths (specific things the page does well). ` +
           `If there were no real problems, say so plainly and make it a short "what's working well" list of strengths instead of inventing or padding issues. ` +
           `Be specific and reference what you actually saw.` +
-          (timeLimited
-            ? ` Note: the audit ended early (the browser session reached its time limit), so summarize only what was observed so far.`
+          (endedEarly
+            ? ` Note: the audit ended early (it was cut short before a natural finish — e.g. the browser session reached its 15-minute limit or the run was cancelled), so summarize only what was actually observed so far and do not invent coverage of pages or steps that weren't reached.`
             : ``) +
           ` Findings: ${JSON.stringify(findings)}`,
       },
