@@ -103,6 +103,36 @@ export function useAudit() {
       setStatus("running");
       pendoTrack("audit_started", { url, suggestedPrompt });
 
+      // Pull the final result (with images) from the stored run. The SSE `done`
+      // omits screenshots, and on a dropped/reconnected stream the result may
+      // not be written the instant the stream ends — so poll until it's there.
+      let loaded = false;
+      const loadFinalResult = async () => {
+        if (loaded) return;
+        loaded = true;
+        for (let i = 0; i < 20; i++) {
+          try {
+            const r = await fetch(`${API}/api/runs/${runId}`).then((x) => x.json());
+            if (r?.result) {
+              setResult(r.result);
+              setScreenshots(r.result.screenshots ?? []);
+              setThinking(null);
+              setStatus("done");
+              return;
+            }
+            if (r?.error) {
+              setError(r.error);
+              setStatus("error");
+              return;
+            }
+          } catch {
+            /* network blip — retry */
+          }
+          await new Promise((res) => setTimeout(res, 2000));
+        }
+        setStatus("done"); // gave up waiting — don't leave the UI spinning
+      };
+
       const on = (name: string, fn: (data: any) => void) =>
         es.addEventListener(name, (ev) => {
           try {
@@ -151,7 +181,12 @@ export function useAudit() {
 
       es.addEventListener("error", (ev) => {
         const data = (ev as MessageEvent).data;
-        if (!data) return; // native EventSource error (e.g. stream closed) — ignore
+        if (!data) {
+          // Native EventSource error. If it gave up (CLOSED, won't reconnect),
+          // the stream is dead — fall back to fetching the stored result.
+          if (es.readyState === EventSource.CLOSED) void loadFinalResult();
+          return;
+        }
         let msg = "stream error";
         try {
           msg = JSON.parse(data).message ?? "stream error";
@@ -169,21 +204,9 @@ export function useAudit() {
         es.close();
       });
 
-      es.addEventListener("end", async () => {
-        setStatus("done");
+      es.addEventListener("end", () => {
         es.close();
-        // Pull the full stored result so the report + recording keep their
-        // images — the SSE `done` omits screenshots to stay under the HTTP/2
-        // frame size that was killing the stream.
-        try {
-          const full = await fetch(`${API}/api/runs/${runId}`).then((r) => r.json());
-          if (full?.result) {
-            setResult(full.result);
-            setScreenshots(full.result.screenshots ?? []);
-          }
-        } catch {
-          /* keep the image-less report already shown */
-        }
+        void loadFinalResult();
       });
     } catch (e) {
       const msg = (e as Error).message;

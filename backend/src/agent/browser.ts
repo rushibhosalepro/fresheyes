@@ -30,7 +30,9 @@ export function createStagehand() {
     domSettleTimeout: 5000,
     actTimeoutMs: 30000,
     // Give the session the full free-tier window (15 min / 900s) instead of the
-    // lower project default — that default is what cut runs off ("session timed out").
+    // lower project default. When the session does time out, the agent builds
+    // the final report from whatever it gathered so far (see runAgent's
+    // session-closed handling) rather than failing.
     browserbaseSessionCreateParams: {
       projectId: process.env.BROWSERBASE_PROJECT_ID!,
       timeout: 900,

@@ -71,8 +71,11 @@ app.get("/api/runs/:id/events", async (req, res) => {
   // Run-once guard: the agent must execute exactly once per run id. Browsers
   // auto-reconnect a dropped EventSource, and without this each reconnect would
   // start a brand-new audit. Any non-queued state → replay the result and close.
+  // Strip screenshots from the replayed `done` (their base64 in one SSE frame
+  // trips ERR_HTTP2_PROTOCOL_ERROR); the client pulls the full result, with
+  // images, via GET /api/runs/:id on `end`.
   if (run.status !== "queued") {
-    if (run.result) send("done", { result: run.result });
+    if (run.result) send("done", { result: { ...run.result, screenshots: [] } });
     send("end", { ok: true });
     res.end();
     return;
