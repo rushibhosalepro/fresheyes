@@ -120,15 +120,13 @@ export function useAudit() {
         stepsCountRef.current += 1;
         if (d.tool) toolsRef.current.push(d.tool);
       });
-      on("screenshot", (d: Screenshot) =>
-        setScreenshots((s) => [...s, { id: d.id, base64: d.base64 }]),
-      );
       on("finding", (d: { finding: Finding }) => {
         findingsCountRef.current += 1;
         setFindings((f) => [...f, d.finding]);
       });
       on("done", (d: { result: AuditResult }) => {
         setResult(d.result);
+        setScreenshots(d.result.screenshots); // populate the recording from the final result
         setThinking(null);
         pendoTrack("audit_completed", {
           url,

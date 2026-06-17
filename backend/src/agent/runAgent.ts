@@ -57,7 +57,6 @@ export type AgentEvent =
   | { type: "start"; url: string; goal: string; title: string }
   | { type: "thinking"; text: string }
   | { type: "step"; index: number; tool: string; args: any; result: any }
-  | { type: "screenshot"; id: string; base64: string }
   | { type: "finding"; finding: Finding }
   | { type: "done"; result: AuditResult }
   | { type: "error"; message: string };
@@ -326,7 +325,10 @@ export async function runAgent(
           const base64 = buffer.toString("base64");
           screenshots.push({ id, base64 });
           if (VISION) pendingImages.push(base64); // hand it to the model after this turn
-          onEvent({ type: "screenshot", id, base64 });
+          // Don't stream the base64 over SSE — full-page PNGs are huge and an
+          // oversized HTTP/2 frame trips ERR_HTTP2_PROTOCOL_ERROR at the edge,
+          // which kills the stream. The shots ride along in the final `done`
+          // result instead; the live browser iframe covers the live view.
           return { ok: true, id, note: note ?? null };
         } catch (e) {
           logToolError("screenshot", e);
