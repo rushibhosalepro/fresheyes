@@ -375,12 +375,17 @@ export async function runAgent(
       messages.push(msg as ChatMessage);
 
       // Surface the model's reasoning so the UI can show what it's thinking.
-      // Reasoning models (via OpenRouter) put their chain-of-thought on
-      // msg.reasoning, separate from msg.content — prefer it, fall back to content.
-      const reasoning =
-        typeof (msg as any).reasoning === "string"
-          ? (msg as any).reasoning.trim()
-          : "";
+      // OpenRouter exposes reasoning in different shapes per model: a `reasoning`
+      // string, OR a `reasoning_details` array of { type, text } parts. Read both,
+      // then fall back to the message content.
+      const m = msg as any;
+      let reasoning = typeof m.reasoning === "string" ? m.reasoning.trim() : "";
+      if (!reasoning && Array.isArray(m.reasoning_details)) {
+        reasoning = m.reasoning_details
+          .map((d: any) => (typeof d?.text === "string" ? d.text : ""))
+          .join(" ")
+          .trim();
+      }
       const content = typeof msg.content === "string" ? msg.content.trim() : "";
       const thought = reasoning || content;
       if (thought) onEvent({ type: "thinking", text: thought });
