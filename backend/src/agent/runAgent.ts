@@ -341,7 +341,7 @@ export async function runAgent(
     // finishes and produces a report instead of hanging until the session dies.
     // Tune via TIME_BUDGET_MS (e.g. lower it for a snappier demo).
     const TIME_BUDGET_MS = Number(process.env.TIME_BUDGET_MS) || 240000; // ~4 min
-    while (!finished && !signal?.aborted) {
+    while (step < MAX_STEPS && !finished && !signal?.aborted) {
       step++;
 
       // Over the time budget → nudge the model to record remaining findings and
