@@ -82,6 +82,8 @@ const SYSTEM_PROMPT = `You are FreshEyes — an agent that experiences a website
 
 Work one tool call at a time: observe() to see the page, act("...") to click / scroll / type, screenshot() at meaningful moments, record_finding(...) for each REAL issue (with its category), and finish(...) when done or blocked.
 
+Every tool call MUST include a "thought": one short, plain, first-person sentence narrating what you're doing and why — as if you're talking out loud to the person watching you browse (e.g. "The hero is vague, so let me scroll to find what this product actually does."). This narration is shown live to the user, so make it natural and specific, never robotic.
+
 You can only audit THIS site. External / off-site links will not open — acting on one just returns you to the page. So don't try to follow links to other domains, and do NOT record a finding whose only issue is an external link (its destination, or the styling of a link that simply leaves the site). Judge the on-site first-time-visitor experience.
 
 Be proportionate. FIRST judge what kind of page this is and how finished it's meant to be, then match the depth of your audit to that. A deliberately minimal placeholder (like example.com) deserves only 1-2 low-severity notes plus a clear statement that it's a placeholder — never pad the report or invent problems to hit a number. Every fix must be concrete and specific: suggest actual colors / hex, button styles, type sizes, spacing, layout, or exact copy — never vague advice like "improve the design". Calibrate severity to real impact on this page's goal, and mention genuine strengths in your summary.
@@ -89,6 +91,16 @@ Be proportionate. FIRST judge what kind of page this is and how finished it's me
 Follow this audit guide:
 
 ${AUDIT_GUIDE}`;
+
+// Every tool requires a `thought`: a short first-person narration of what the
+// agent is doing and why. We surface it live so the user always sees the agent's
+// reasoning — independent of whether the model emits reasoning tokens (many
+// tool-calling models, e.g. Nemotron, return none on action turns).
+const THOUGHT = {
+  type: "string" as const,
+  description:
+    'One short, first-person sentence narrating what you\'re doing and why, for the person watching — e.g. "Let me try the signup button to see if it actually works."',
+};
 
 const TOOL_SCHEMAS: ToolSchema[] = [
   {
@@ -100,12 +112,14 @@ const TOOL_SCHEMAS: ToolSchema[] = [
       parameters: {
         type: "object",
         properties: {
+          thought: THOUGHT,
           instruction: {
             type: "string",
             description:
               "What to look for, e.g. 'the primary call-to-action' or 'navigation links'.",
           },
         },
+        required: ["thought"],
       },
     },
   },
@@ -118,12 +132,13 @@ const TOOL_SCHEMAS: ToolSchema[] = [
       parameters: {
         type: "object",
         properties: {
+          thought: THOUGHT,
           instruction: {
             type: "string",
             description: "The single action to perform.",
           },
         },
-        required: ["instruction"],
+        required: ["thought", "instruction"],
       },
     },
   },
@@ -135,11 +150,13 @@ const TOOL_SCHEMAS: ToolSchema[] = [
       parameters: {
         type: "object",
         properties: {
+          thought: THOUGHT,
           note: {
             type: "string",
             description: "Optional short label for what this shows.",
           },
         },
+        required: ["thought"],
       },
     },
   },
@@ -152,6 +169,7 @@ const TOOL_SCHEMAS: ToolSchema[] = [
       parameters: {
         type: "object",
         properties: {
+          thought: THOUGHT,
           category: {
             type: "string",
             enum: [
@@ -182,7 +200,7 @@ const TOOL_SCHEMAS: ToolSchema[] = [
           },
           fix: { type: "string", description: "One concrete suggested fix." },
         },
-        required: ["category", "severity", "title", "description", "fix"],
+        required: ["thought", "category", "severity", "title", "description", "fix"],
       },
     },
   },
@@ -194,10 +212,11 @@ const TOOL_SCHEMAS: ToolSchema[] = [
       parameters: {
         type: "object",
         properties: {
+          thought: THOUGHT,
           outcome: { type: "string", enum: ["done", "blocked"] },
           reason: { type: "string", description: "Brief reason for ending." },
         },
-        required: ["outcome"],
+        required: ["thought", "outcome"],
       },
     },
   },
@@ -393,6 +412,15 @@ export async function runAgent(
 
       for (const call of msg.tool_calls) {
         const fn = (call as any).function;
+        const args = safeForEvent(fn?.arguments);
+        // Every tool call carries a first-person `thought` (required by the
+        // schema). Surface it as the agent's reasoning — this is the reliable,
+        // model-agnostic source, unlike optional reasoning tokens above.
+        const narration =
+          typeof (args as any)?.thought === "string"
+            ? (args as any).thought.trim()
+            : "";
+        if (narration) onEvent({ type: "thinking", text: narration });
         const result = await runTool(impls, fn?.name, fn?.arguments);
         console.log(
           `[step ${step}] ${fn?.name}(${truncate(fn?.arguments)}) -> ${truncate(JSON.stringify(result))}`,
@@ -401,7 +429,7 @@ export async function runAgent(
           type: "step",
           index: step,
           tool: fn?.name,
-          args: safeForEvent(fn?.arguments),
+          args,
           result,
         });
         messages.push({
