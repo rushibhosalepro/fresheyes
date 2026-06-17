@@ -582,7 +582,8 @@ async function synthesize(
         content:
           `Write a short executive summary of the first-time-visitor experience for a busy founder. ` +
           `Lead with the overall impression, then the most important things to fix, then name 2-3 concrete strengths (specific things the page does well). ` +
-          `If there were no real problems, say so plainly and make it a short "what's working well" list of strengths instead of inventing or padding issues. ` +
+          `Always include a brief read on the visual design (color palette, contrast, hierarchy, typography) and on the UX/flow (how the primary action actually felt to use) — even when nothing is broken; reference the actual colors and the action you took. ` +
+          `If there were no real problems, say so plainly, but still give a specific "what's working well" list of strengths PLUS that visual + UX read — never just a one-line "looks fine", and never invent or pad taste-based issues. ` +
           `Be specific and reference what you actually saw.` +
           (endedEarly
             ? ` Note: the audit ended early (it was cut short before a natural finish — e.g. the browser session reached its 15-minute limit or the run was cancelled), so summarize only what was actually observed so far and do not invent coverage of pages or steps that weren't reached.`

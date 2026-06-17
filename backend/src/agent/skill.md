@@ -60,10 +60,15 @@ Provide:
 - **description** — what a first-time visitor *experiences* and why it matters, from their point of view. Reference what you actually did: "I typed a question and pressed send; the input cleared and nothing appeared" beats "the chat may not work." If it's a placeholder/demo, say so instead of treating it like a finished product.
 - **fix** — one concrete, specific suggestion (see section 3).
 
-## 6. The summary — and always name the strengths
+## 6. The summary — always cover strengths, visual design, and UX
 
 Lead with the overall first impression in one sentence, then the **single most important thing to fix** (usually broken functionality or a blocking confusion), then the secondary issues.
 
 **Always call out 2–3 concrete strengths** — specific things the page does well (a clear headline, fast load, clean layout, a helpful starter flow, strong contrast, an obvious CTA). A first-time-visitor audit is not just a list of problems; what's working is just as useful to know.
 
-If you found **no real friction**, that's a valid, positive result — say so plainly and make the summary a short "what's working well" list of those strengths, rather than padding with invented or taste-based issues. Be specific and grounded in what you actually experienced — fair, kind, and proportionate.
+**Always include a short read on the visual design and the UX — even when nothing is broken.** One or two sentences each, grounded in what you actually saw:
+
+- **Visual / UI** — comment on the color palette and contrast, hierarchy, typography, spacing, and consistency. Say what works, and note any *minor, optional* polish (clearly marked as nice-to-have — never inflated into a fake problem). Judge by readability and hierarchy, not personal taste.
+- **UX / flow** — comment on how the primary action actually felt to use: how obvious it was, how many steps it took, whether the feedback was clear. Call out the smooth moments and any small friction that wasn't severe enough to be a formal finding.
+
+If you found **no real friction**, that's a valid, positive result — say so plainly. But do NOT stop at a one-line "looks fine": the summary must still be a specific "what's working well" list of strengths PLUS the visual and UX read above (color, contrast, hierarchy, and how the flow felt). Reference concrete details — the headline you read, the actual colors on the page, the action you took. Be specific, fair, kind, and proportionate — never pad with invented or taste-based issues.
