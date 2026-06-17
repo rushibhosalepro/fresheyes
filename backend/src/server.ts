@@ -53,9 +53,13 @@ app.get("/api/runs/:id/events", async (req, res) => {
   }
 
   // SSE headers (setHeader keeps the CORS header the middleware already set).
+  // NOTE: do NOT set "Connection: keep-alive". It's a forbidden connection-
+  // specific header in HTTP/2, and Railway terminates TLS/HTTP2 at its edge —
+  // sending it makes the browser kill the stream with ERR_HTTP2_PROTOCOL_ERROR.
+  // (It works locally only because that's plain HTTP/1.1.) SSE stays open
+  // without it.
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no"); // disable proxy buffering so events flush live
   res.flushHeaders?.();
 
