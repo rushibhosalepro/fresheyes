@@ -498,8 +498,9 @@ async function synthesize(
       {
         role: "user",
         content:
-          `Write a 3-4 sentence executive summary of the first-time-visitor experience for a busy founder. ` +
-          `Lead with the overall impression, then the most important things to fix, and mention any genuine strengths. ` +
+          `Write a short executive summary of the first-time-visitor experience for a busy founder. ` +
+          `Lead with the overall impression, then the most important things to fix, then name 2-3 concrete strengths (specific things the page does well). ` +
+          `If there were no real problems, say so plainly and make it a short "what's working well" list of strengths instead of inventing or padding issues. ` +
           `Be specific and reference what you actually saw.` +
           (timeLimited
             ? ` Note: the audit ended early (the browser session reached its time limit), so summarize only what was observed so far.`

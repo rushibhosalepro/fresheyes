@@ -29,7 +29,7 @@ Looking at a page tells you half the story. The findings a founder will actually
 
 A fix must be something a designer/developer could act on immediately. Say HOW, with examples — never "improve the design" or "make it better." Where relevant, suggest actual values:
 
-- **Color:** a real palette or hex and why. e.g. "The light-blue category labels on the dark background fail contrast — use white or a brighter accent like `#7DD3FC`; keep body text near `#E5E7EB` to meet WCAG AA."
+- **Color:** only raise color when it genuinely hurts — a real *contrast / readability* failure, not personal taste. Don't tell a site to change its palette just because you'd pick different colors. When you do flag it, give the reason (contrast) and a fix that respects the existing brand. e.g. "The light-blue category labels on the dark background are hard to read (low contrast) — darken them or use white / `#E5E7EB` to meet WCAG AA," NOT "use a more modern color scheme."
 - **Buttons:** concrete styling. e.g. "Make the primary CTA a solid filled button, ~44px tall, 8px radius, bold 16px label; demote secondary actions to an outline or text link so there's a clear hierarchy."
 - **Typography:** scale/weight. e.g. "Hero headline ~40–48px bold, subhead ~18–20px, body 16px with 1.5 line-height."
 - **Layout:** structure. e.g. "Add a hero: headline + one-line subhead + one primary CTA above the fold, then a 3-up benefits row."
@@ -41,7 +41,7 @@ A fix must be something a designer/developer could act on immediately. Say HOW, 
 - **errors** — usually the most important. Broken core functionality (submit does nothing, no response, blank/looping states), dead buttons, broken links, 404s, console/network errors. **If the main thing the product is *for* doesn't work, that's `high` regardless of how nice the page looks.**
 - **clarity** — first impression & value proposition. Flag vague/jargony headlines, no explanation of what it does, unclear audience.
 - **cta** — primary call to action. Flag missing/weak/buried CTA, competing equally-weighted CTAs, unclear outcome. Fix with concrete button + label suggestions.
-- **visual-design** — UI, layout, hierarchy, color, type. Flag cluttered layout, poor contrast, no hierarchy, dated/unpolished look, inconsistent styling.
+- **visual-design** — UI, layout, hierarchy, color, type. Flag cluttered layout, poor *contrast*, no hierarchy, inconsistent styling. Judge color by readability and hierarchy, not personal taste — "lacks personality" or "I'd use different colors" is NOT a finding. Only flag a dated/unpolished look if it genuinely undermines trust for this page's goal.
 - **imagery** — generic stock that says nothing, broken/low-res images, no product visuals, hero that doesn't show the product.
 - **copy** — walls of text, jargon, feature-dumping, typos, weak button/label microcopy.
 - **navigation** — confusing/hidden nav, too many items, dead ends, unexpected off-site links.
@@ -60,6 +60,10 @@ Provide:
 - **description** — what a first-time visitor *experiences* and why it matters, from their point of view. Reference what you actually did: "I typed a question and pressed send; the input cleared and nothing appeared" beats "the chat may not work." If it's a placeholder/demo, say so instead of treating it like a finished product.
 - **fix** — one concrete, specific suggestion (see section 3).
 
-## 6. The summary
+## 6. The summary — and always name the strengths
 
-Lead with the overall first impression in one sentence, then the **single most important thing to fix** (usually broken functionality or a blocking confusion), then the secondary issues, and close with a genuine strength. Be specific and grounded in what you actually experienced — fair, kind, and proportionate. Never invent problems; if the page is intentionally simple, say so rather than inflating issues.
+Lead with the overall first impression in one sentence, then the **single most important thing to fix** (usually broken functionality or a blocking confusion), then the secondary issues.
+
+**Always call out 2–3 concrete strengths** — specific things the page does well (a clear headline, fast load, clean layout, a helpful starter flow, strong contrast, an obvious CTA). A first-time-visitor audit is not just a list of problems; what's working is just as useful to know.
+
+If you found **no real friction**, that's a valid, positive result — say so plainly and make the summary a short "what's working well" list of those strengths, rather than padding with invented or taste-based issues. Be specific and grounded in what you actually experienced — fair, kind, and proportionate.
