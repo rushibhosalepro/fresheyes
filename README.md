@@ -121,6 +121,10 @@ An agent driving a real browser fails in a hundred ways. FreshEyes is engineered
 
 FreshEyes uses **Novus** (Pendo's product agent) for analytics. Novus connected to the repo, scanned the codebase, and opened PRs that install the SDK and auto-instrument the product — page views, click events, the audit funnel, and AI-agent analytics on the audit interaction itself. So real user behavior is measurable the moment the first stranger lands — without hand-writing tracking code.
 
+![Novus dashboard for FreshEyes — visitors, audits started, audits completed](./novus-proofs/dashboard-overview.jpeg)
+
+**Proof:** the [`novus-proofs/`](./novus-proofs) folder has the live Novus dashboard plus detail views — visitors, the `audit_started → audit_completed` funnel, track events, session replays, AI-agent analytics, signals, and the auto-instrumentation PRs Novus opened on this repo.
+
 ---
 
 ## 🚀 Getting Started

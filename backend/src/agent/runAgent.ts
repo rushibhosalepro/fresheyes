@@ -221,6 +221,7 @@ export async function runAgent(
   const screenshots: { id: string; base64: string }[] = [];
   const pendingImages: string[] = []; // screenshots captured this turn, fed to a vision model
   let finished: { outcome: "done" | "blocked"; reason: string } | null = null;
+  let step = 0; // declared before the try so the catch can still report progress
 
   try {
     // Use the session's existing page (single target) so the live view shows
@@ -332,10 +333,10 @@ export async function runAgent(
       },
     ];
 
-    let step = 0;
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
-    // No step/time cap for now (testing) — the loop ends only when the model
-    // calls finish() or the run is cancelled.
+    let sessionClosed = false; // Browserbase session ended (e.g. 15-min cap)
+    // No step/time cap for now — the loop ends when the model calls finish(),
+    // the run is cancelled, or the Browserbase session closes.
     while (!finished && !signal?.aborted) {
       step++;
       let res;
@@ -403,7 +404,14 @@ export async function runAgent(
           tool_call_id: call.id,
           content: JSON.stringify(result),
         });
+        // The Browserbase session ended (e.g. hit the 15-min cap). Stop and build
+        // a report from what we already have instead of erroring or looping.
+        if ((result as any)?.__sessionClosed) {
+          sessionClosed = true;
+          break;
+        }
       }
+      if (sessionClosed) break;
 
       // If vision is on, show the model the screenshot(s) it just captured so it
       // can judge visual design, imagery, layout, and color from real pixels.
@@ -426,12 +434,16 @@ export async function runAgent(
     const aborted = signal?.aborted ?? false;
     const summary = aborted
       ? "Audit cancelled."
-      : await synthesize(messages, findings);
+      : await synthesize(messages, findings, sessionClosed).catch(
+          () => "Could not generate a summary.",
+        );
     const status: AuditResult["status"] = aborted
       ? "cancelled"
       : finished
         ? (finished as { outcome: "done" | "blocked" }).outcome
-        : "max_steps";
+        : sessionClosed
+          ? "blocked"
+          : "max_steps";
 
     const result: AuditResult = {
       url,
@@ -444,10 +456,27 @@ export async function runAgent(
     onEvent({ type: "done", result });
     return result;
   } catch (err) {
+    // If the failure is just the Browserbase session ending, don't error out —
+    // hand back a report built from whatever was found so far.
+    if (isSessionClosed(err)) {
+      const summary = await synthesize([], findings, true).catch(
+        () => "The audit ended early when the browser session closed.",
+      );
+      const result: AuditResult = {
+        url,
+        status: "blocked",
+        steps: step,
+        findings,
+        summary,
+        screenshots,
+      };
+      onEvent({ type: "done", result });
+      return result;
+    }
     onEvent({ type: "error", message: (err as Error).message });
     throw err;
   } finally {
-    await stagehand.close();
+    await stagehand.close().catch(() => {});
   }
 }
 
@@ -455,6 +484,7 @@ export async function runAgent(
 async function synthesize(
   messages: ChatMessage[],
   findings: Finding[],
+  timeLimited = false,
 ): Promise<string> {
   const res = await llm.chat.completions.create({
     model: MODEL,
@@ -465,7 +495,11 @@ async function synthesize(
         content:
           `Write a 3-4 sentence executive summary of the first-time-visitor experience for a busy founder. ` +
           `Lead with the overall impression, then the most important things to fix, and mention any genuine strengths. ` +
-          `Be specific and reference what you actually saw. Findings: ${JSON.stringify(findings)}`,
+          `Be specific and reference what you actually saw.` +
+          (timeLimited
+            ? ` Note: the audit ended early (the browser session reached its time limit), so summarize only what was observed so far.`
+            : ``) +
+          ` Findings: ${JSON.stringify(findings)}`,
       },
     ],
   });
@@ -496,11 +530,31 @@ async function runTool(
   try {
     return await impl(parsed.value);
   } catch (e) {
+    if (isSessionClosed(e)) {
+      return { error: "the browser session ended", __sessionClosed: true };
+    }
     return {
       error: `tool "${name}" threw: ${(e as Error).message}`,
       hint: "Try a different action, observe again, or finish as blocked if you cannot proceed.",
     };
   }
+}
+
+// Detect errors that mean the Browserbase session is gone (e.g. it hit the
+// 15-min cap, or the CDP socket closed). When this happens we stop and report
+// what we have instead of erroring or looping forever.
+function isSessionClosed(err: unknown): boolean {
+  const m = String((err as any)?.message ?? err ?? "").toLowerCase();
+  return [
+    "session timed out",
+    "transport closed",
+    "socket-close",
+    "target closed",
+    "connection ended",
+    "session not found",
+    "browser has disconnected",
+    "cdp connection closed",
+  ].some((s) => m.includes(s));
 }
 
 function parseArgs(

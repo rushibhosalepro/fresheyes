@@ -166,9 +166,16 @@ export default function Home() {
           className={`grid gap-6 ${showLeft ? "lg:grid-cols-2 lg:items-start" : ""}`}
         >
           {showLeft && (
-            <div className="lg:sticky lg:top-6">
+            <div className="flex flex-col gap-3 lg:sticky lg:top-6">
               {busy ? (
-                <LiveView url={liveViewUrl} />
+                <>
+                  <LiveView url={liveViewUrl} />
+                  {thinking && (
+                    <p className="animate-in-up text-sm italic leading-relaxed text-zinc-400 dark:text-zinc-500">
+                      <span className="font-medium not-italic">AI:</span> {thinking}
+                    </p>
+                  )}
+                </>
               ) : (
                 <Recording screenshots={screenshots} />
               )}
@@ -179,7 +186,7 @@ export default function Home() {
             {result ? (
               <Report result={result} />
             ) : (
-              <ActivityPanel steps={steps} thinking={thinking} busy={busy} />
+              <ActivityPanel steps={steps} busy={busy} />
             )}
           </div>
         </div>
@@ -324,11 +331,9 @@ function Report({ result }: { result: AuditResult }) {
 /* ── Live activity (running) ─────────────────────────────── */
 function ActivityPanel({
   steps,
-  thinking,
   busy,
 }: {
   steps: Step[];
-  thinking: string | null;
   busy: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -370,12 +375,6 @@ function ActivityPanel({
           )}
         </ol>
       </div>
-
-      {thinking && (
-        <p className="animate-in-up text-sm italic leading-relaxed text-zinc-400 dark:text-zinc-500">
-          <span className="font-medium not-italic">AI:</span> {thinking}
-        </p>
-      )}
     </div>
   );
 }
