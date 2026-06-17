@@ -335,28 +335,10 @@ export async function runAgent(
 
     let nudges = 0; // times we've nudged a narrating model to actually call a tool
     let sessionClosed = false; // Browserbase session ended (e.g. 15-min cap)
-    let wrappedUp = false;
-    const startedAt = Date.now();
-    // Wrap up well before Browserbase's 15-min session cap so the run always
-    // finishes and produces a report instead of hanging until the session dies.
-    // Tune via TIME_BUDGET_MS (e.g. lower it for a snappier demo).
-    const TIME_BUDGET_MS = Number(process.env.TIME_BUDGET_MS) || 240000; // ~4 min
+    // Bounded by MAX_STEPS (plus the model calling finish, the run being
+    // cancelled, or the Browserbase session closing). No wall-clock cap.
     while (step < MAX_STEPS && !finished && !signal?.aborted) {
       step++;
-
-      // Over the time budget → nudge the model to record remaining findings and
-      // finish; hard-stop shortly after if it still won't, so a report is produced.
-      const elapsed = Date.now() - startedAt;
-      if (!wrappedUp && elapsed > TIME_BUDGET_MS) {
-        wrappedUp = true;
-        messages.push({
-          role: "user",
-          content:
-            "You are almost out of time. Record any remaining findings now, then call finish (done or blocked). Stop exploring — don't re-scroll or re-observe content you've already seen.",
-        });
-      }
-      if (elapsed > TIME_BUDGET_MS + 60000) break; // hard stop ~1 min after the budget
-
       let res;
 
       try {
