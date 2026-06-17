@@ -14,7 +14,6 @@ export const MODEL =
 export const STAGEHAND_MODEL =
   process.env.STAGEHAND_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
 
-console.log(MODEL);
 export const llm = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: process.env.OPENROUTER_API_KEY,

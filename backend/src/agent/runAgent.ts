@@ -625,22 +625,33 @@ function truncate(s: unknown, n = 140): string {
 }
 
 // Fetch Browserbase's embeddable live-view URL for a session (never throws).
-async function getLiveViewUrl(sessionId: string): Promise<string | undefined> {
-  try {
-    const res = await fetch(
-      `https://api.browserbase.com/v1/sessions/${sessionId}/debug`,
-      {
-        headers: { "X-BB-API-Key": process.env.BROWSERBASE_API_KEY ?? "" },
-      },
-    );
-    if (!res.ok) return undefined;
-    const data: any = await res.json();
-    return (
-      data?.debuggerFullscreenUrl ?? data?.pages?.[0]?.debuggerFullscreenUrl
-    );
-  } catch {
-    return undefined;
+// Retries briefly: right after init the debugger URL may not be provisioned
+// yet, and a single failed fetch would leave the live view stuck on
+// "Connecting…" for the whole run (looks like the live browser never updates).
+async function getLiveViewUrl(
+  sessionId: string,
+  attempts = 5,
+): Promise<string | undefined> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(
+        `https://api.browserbase.com/v1/sessions/${sessionId}/debug`,
+        {
+          headers: { "X-BB-API-Key": process.env.BROWSERBASE_API_KEY ?? "" },
+        },
+      );
+      if (res.ok) {
+        const data: any = await res.json();
+        const url =
+          data?.debuggerFullscreenUrl ?? data?.pages?.[0]?.debuggerFullscreenUrl;
+        if (url) return url;
+      }
+    } catch {
+      /* transient — retry */
+    }
+    await new Promise((r) => setTimeout(r, 1000));
   }
+  return undefined;
 }
 
 // Best-effort parse of tool args for event payloads (never throws).
