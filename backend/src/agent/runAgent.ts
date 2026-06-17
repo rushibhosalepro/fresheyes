@@ -550,7 +550,32 @@ async function synthesize(
       },
     ],
   });
-  return res.choices[0]?.message?.content ?? "";
+
+  // Read the summary from content, but fall back to reasoning shapes — some
+  // models (e.g. gemini-2.5-pro) return the prose in `reasoning` /
+  // `reasoning_details` and leave `content` empty, which left the report's
+  // Summary blank ("—").
+  const msg = res?.choices?.[0]?.message as any;
+  let out = typeof msg?.content === "string" ? msg.content.trim() : "";
+  if (!out && typeof msg?.reasoning === "string") out = msg.reasoning.trim();
+  if (!out && Array.isArray(msg?.reasoning_details)) {
+    out = msg.reasoning_details
+      .map((d: any) => (typeof d?.text === "string" ? d.text : ""))
+      .join(" ")
+      .trim();
+  }
+  if (out) return out;
+
+  // Model returned nothing usable — build a deterministic summary from the
+  // findings so the report is never left without one.
+  if (!findings.length) {
+    return "No significant friction was found for a first-time visitor — the core flow worked and the page read clearly.";
+  }
+  const top = findings.find((f) => f.severity === "high") ?? findings[0];
+  return (
+    `A first-time visitor would hit ${findings.length} issue${findings.length > 1 ? "s" : ""} on this page. ` +
+    `The most important: ${top.title}. ${top.fix}`
+  );
 }
 
 /**
