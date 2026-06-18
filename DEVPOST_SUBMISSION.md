@@ -58,6 +58,7 @@ FreshEyes is a **brain + hands** agent. An LLM does the reasoning; a real cloud 
 ## Challenges I ran into
 
 - **Driving a real browser reliably.** An agent clicking through arbitrary sites fails in a hundred ways — logins, bot-checks, timeouts. The fix was to treat a block as a *finding* (not a crash), cap the loop, capture the live view immediately so it never *looks* stuck, and guard the run so a dropped connection can never re-trigger a second audit.
+- **Surviving the session timeout.** A long audit can hit the cloud browser's session cap mid-run. Instead of failing, FreshEyes builds the final report from everything gathered so far and reliably delivers it to the UI even after the live stream drops.
 - **Making the model behave reliably as an agent.** Models can emit malformed tool calls. The loop had to feed every error back as a message the model could read and self-correct from, instead of dead-ending.
 - **Proportionate judgment.** Early versions over-reported — four findings and a "HIGH" on a placeholder page. Moving the calibration logic into `skill.md` ("figure out the page type first, then audit to that") was the biggest jump in quality.
 - **Streaming an agentic loop to the UI.** Surfacing the agent's reasoning, actions, screenshots, and findings as distinct live events — and letting the user truly cancel mid-run — took real iteration.
