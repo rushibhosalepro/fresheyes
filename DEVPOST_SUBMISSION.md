@@ -4,11 +4,27 @@
 
 ---
 
+## 🔗 Try it
+
+- **Live app:** https://fresheyes.vercel.app/
+- **Demo video (2–3 min):** https://youtu.be/Q598AuZNlkk
+- **Full audit of a larger site (~15 min, end-to-end):** https://youtu.be/1sqHTFl_Npw
+- **Code:** https://github.com/rushibhosalepro/fresheyes
+- **Novus dashboard proof:** https://github.com/rushibhosalepro/fresheyes/tree/main/novus-proofs
+
+---
+
+## Mission
+
+Everyone ships now — but shipping isn't the finish line; being *understood* is. FreshEyes exists to give every builder the one thing they can't get on their own: an honest, first-time look at their own product. We want a stranger's confusion to be visible *before* it costs you a user — so anyone, on any budget, can see their product through fresh eyes and fix the first impression early.
+
+---
+
 ## Inspiration
 
-You can't un-see your own product. The people who build a website — founders, PMs, designers — already know what it is, who it's for, and where every button leads. So they're the *worst* judges of the first 10 seconds a stranger spends on it, even though those 10 seconds decide whether the stranger stays.
+Everyone ships now — developers, PMs, and designers can all build and put a site live. But you can't un-see your own product: the people who build a website already know what it is, who it's for, and where every button leads. So they're the *worst* judges of the first 10 seconds a stranger spends on it, even though those 10 seconds decide whether the stranger stays.
 
-The usual ways to close that gap are bad: real user testing is slow and expensive, "audit" tools just run Lighthouse and hand you performance scores, and asking friends gets you politeness instead of the moment they got lost. There's a gap between *"technically works"* and *"a real person lands on it and actually gets it."* FreshEyes lives in that gap — it sends an AI through your site as a confused newcomer and tells you what it found.
+The usual ways to close that gap are bad: real user testing is slow and expensive — and by the time that feedback reaches you, you've already lost users; "audit" tools just run Lighthouse and hand you performance scores; and asking friends gets you politeness instead of the moment they got lost. There's a gap between *"technically works"* and *"a real person lands on it and actually gets it."* FreshEyes lives in that gap — it sends an AI through your site as a confused newcomer and tells you what it found.
 
 ---
 

@@ -2,19 +2,25 @@
 
 > **You can't un-see your own product. FreshEyes can.** Paste a URL and an AI agent opens a real browser, walks your site like a brand-new visitor, and reports exactly where they get stuck — with a ranked, fixable report and screenshot evidence.
 
-**🚀 [Try FreshEyes Live](#)** | **📹 [Watch the Demo](#)** | **📊 Measured with Novus**
+**🚀 [Try FreshEyes Live](https://fresheyes.vercel.app/)** | **📹 [Watch the Demo](https://youtu.be/Q598AuZNlkk)** | **📊 Measured with Novus**
 
 ![FreshEyes auditing a live site — live browser preview and streaming agent activity](./images/home-page.PNG)
 
 ---
 
+## 🎯 Mission
+
+Everyone ships now — but shipping isn't the finish line; being *understood* is. FreshEyes exists to give every builder the one thing they can't get on their own: an honest, first-time look at their own product. We want a stranger's confusion to be visible *before* it costs you a user — so anyone, on any budget, can see their product through fresh eyes and fix the first impression early.
+
+---
+
 ## 📌 The Problem
 
-The first 10 seconds a stranger spends on your site decide whether they stay. But the people who built it — founders, PMs, designers — are the *worst* judges of those 10 seconds, because they already know what the product is, who it's for, and where every button leads. You literally cannot experience your own site as a newcomer.
+Everyone ships now — developers, PMs, and designers can all do the technical work and put a real site live. But the first 10 seconds a stranger spends on it decide whether they stay, and the people who built it — founders, PMs, designers — are the *worst* judges of those 10 seconds, because they already know what the product is, who it's for, and where every button leads. You literally cannot experience your own site as a newcomer.
 
 The usual ways to close that gap are bad:
 
-- **Real user testing** is slow, expensive, and scheduled days out.
+- **Real user testing** is slow and expensive — and by the time the feedback reaches you, you've already lost users.
 - **"Audit" tools** run Lighthouse and hand you performance scores — they never actually *try to use the thing* as a confused first-timer would.
 - **Asking friends** gets you politeness, not the moment they got lost.
 
@@ -38,8 +44,9 @@ Crucially, it's **calibrated, not padded**: FreshEyes first figures out *what ki
 
 ## 🎬 Demo & Deployment
 
-- **Live Demo**: _coming soon_
-- **Video Demo**: _coming soon_ (2–3 min walkthrough)
+- **Live Demo**: [fresheyes.vercel.app](https://fresheyes.vercel.app/)
+- **Video Demo** (2–3 min walkthrough, audits example.com): [Watch on YouTube](https://youtu.be/Q598AuZNlkk)
+- **Full audit of a larger site** (~15 min, end-to-end run): [Watch on YouTube](https://youtu.be/1sqHTFl_Npw) — the short demo uses example.com so it stays quick; a real site takes longer, so this shows a complete, deeper audit start to finish.
 
 ---
 
@@ -134,21 +141,27 @@ FreshEyes uses **Novus** (Pendo's product agent) for analytics. Novus connected 
 
 ### Environment variables
 
-**`backend/.env`:**
+**`backend/.env`** (copy from [`backend/.env.example`](./backend/.env.example)):
 
 ```env
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=google/gemini-2.5-pro
-OPENROUTER_VISION=false           # true + a vision model = the agent SEES screenshots
-BROWSERBASE_API_KEY=bb_live_...
-BROWSERBASE_PROJECT_ID=...
-# PORT=8787
-# FRONTEND_ORIGIN=http://localhost:3000
+# Required
+OPENROUTER_API_KEY=sk-or-v1-...       # LLM "brain" — https://openrouter.ai/keys
+BROWSERBASE_API_KEY=bb_live_...       # real cloud browser — browserbase.com
+BROWSERBASE_PROJECT_ID=...            # Browserbase → Settings
+
+# Optional (defaults shown)
+OPENROUTER_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free   # brain model (needs tool_calls)
+STAGEHAND_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free    # browser "hands" model
+OPENROUTER_VISION=false               # true + a vision model = the agent SEES screenshots
+# MAX_STEPS=30                        # max agent turns per audit
+# PORT=8787                           # backend port
+# FRONTEND_ORIGIN=http://localhost:3000   # CORS origin (default: any)
 ```
 
-**`frontend/.env.local`:**
+**`frontend/.env.local`** (copy from [`frontend/.env.example`](./frontend/.env.example)):
 
 ```env
+# Optional locally (defaults to localhost:8787); required in production
 NEXT_PUBLIC_API_BASE=http://localhost:8787
 ```
 
